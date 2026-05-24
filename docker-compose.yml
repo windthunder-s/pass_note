@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  password-manager:
+    build: .
+    container_name: password-manager
+    ports:
+      - "8888:8888"
+    volumes:
+      # 持久化数据库数据
+      - ./data:/app/data
+      # 持久化备份文件
+      - ./backups:/app/backups
+    environment:
+      - NODE_ENV=production
+      - PORT=8888
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8888"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

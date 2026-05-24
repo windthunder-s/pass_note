@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+# data/*.db  # 取消注释以排除数据库文件
+*.md
+.DS_Store
+

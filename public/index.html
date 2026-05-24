@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>密码管理器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+     <!-- 侧边栏遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="handleOverlayClick()"></div>
+    
+    <!-- 侧边栏 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <span>🔐</span>
+          <span class="sidebar-title">密码管理器</span>
+        </div>
+        <button class="sidebar-close" onclick="closeSidebar()">
+          <span>×</span>
+        </button>
+      </div>
+      
+      <div class="sidebar-content">
+        <!-- 分类列表 -->
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">分类</h3>
+          <div class="category-sidebar-list" id="categorySidebarList">
+            <div class="sidebar-category active" data-category="all">
+              <span class="category-emoji">📋</span>
+              <span class="category-name">全部</span>
+              <span class="category-count">0</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 排序按钮 -->
+        <div class="sidebar-section">
+          <button class="btn btn-secondary btn-full" onclick="openSortModal()">↕️ 分类排序</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content" id="mainContent">
+      <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+          <div class="header-left">
+            <h1>🔐 密码管理器</h1>
+            <span class="count">共 <span id="passwordCount">0</span> 条记录</span>
+          </div>
+          <div class="header-right">
+            <button class="btn btn-outline" onclick="openSettingsModal()">⚙️ 设置</button>
+            <button class="btn btn-primary" onclick="openModal()">+ 添加账号</button>
+          </div>
+        </header>
+
+        <!-- 搜索和筛选 -->
+        <div class="filter-bar">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索标题、用户名、网址..." oninput="handleSearch()">
+            <span class="search-icon">🔍</span>
+          </div>
+          <select id="categoryFilter" onchange="handleSearch()">
+            <option value="all">全部分类</option>
+          </select>
+        </div>
+
+        <!-- 分类标签 -->
+        <div class="category-tags" id="categoryTags">
+        </div>
+
+        <!-- 密码列表 -->
+        <div class="password-list" id="passwordList">
+          <!-- 动态生成 -->
+        </div>
+
+        <!-- 空状态 -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📭</div>
+          <p>还没有保存的密码</p>
+          <button class="btn btn-primary" onclick="openModal()">添加第一个账号</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 添加/编辑弹窗 -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">添加账号</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="passwordForm" onsubmit="handleSubmit(event)">
+        <input type="hidden" id="editId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>标题</label>
+            <input type="text" id="title" placeholder="例如：微信、QQ、邮箱">
+          </div>
+          <div class="form-group">
+            <label>分类</label>
+            <select id="category">
+              <option value="other">📦 其他</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>用户名/账号</label>
+            <input type="text" id="username" placeholder="用户名或邮箱">
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <div class="password-input">
+              <input type="password" id="password" placeholder="密码">
+              <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>网址</label>
+          <input type="text" id="url" placeholder="https://example.com">
+        </div>
+        <div class="form-group">
+          <label>备注</label>
+          <textarea id="note" rows="3" placeholder="备注信息（可选）"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 分类管理弹窗 -->
+  <div class="modal" id="categoryModal">
+    <div class="modal-content category-modal">
+      <div class="modal-header">
+        <h2>📁 管理分类</h2>
+        <button class="close-btn" onclick="closeCategoryModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="category-list" id="categoryList">
+          <!-- 动态生成 -->
+        </div>
+        <button class="btn btn-primary w-full mt-4" onclick="addCategory()">+ 添加分类</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加/编辑分类弹窗 -->
+  <div class="modal" id="editCategoryModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="categoryModalTitle">添加分类</h2>
+        <button class="close-btn" onclick="closeEditCategoryModal()">&times;</button>
+      </div>
+      <form id="categoryForm" onsubmit="handleCategorySubmit(event)">
+        <input type="hidden" id="categoryEditId">
+        <div class="form-group">
+          <label>分类名称 *</label>
+          <input type="text" id="categoryName" placeholder="例如：社交、工作" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>图标</label>
+            <div class="icon-input">
+              <input type="text" id="categoryIcon" placeholder="点击选择图标" value="📦" readonly>
+              <button type="button" class="btn btn-small btn-secondary" onclick="openEmojiModal()">选择图标</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>颜色</label>
+            <input type="color" id="categoryColor" value="#667eea">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditCategoryModal()">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 备份管理弹窗 -->
+  <div class="modal" id="backupModal">
+    <div class="modal-content large-modal">
+      <div class="modal-header">
+        <h2>📦 备份管理</h2>
+        <button class="close-btn" onclick="closeBackupModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="backup-stats">
+          <div class="stat-item">
+            <span class="stat-value" id="backupCount">0</span>
+            <span class="stat-label">备份总数</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="lastBackupTime">-</span>
+            <span class="stat-label">上次备份</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="backupInterval">-</span>
+            <span class="stat-label">备份间隔</span>
+          </div>
+        </div>
+        <div class="backup-actions">
+          <button class="btn btn-primary" onclick="createBackup()">📥 立即备份</button>
+        </div>
+        <div class="backup-list" id="backupList">
+          <!-- 动态生成备份列表 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 备份详情弹窗 -->
+  <div class="modal" id="backupDetailModal">
+    <div class="modal-content large-modal">
+      <div class="modal-header">
+        <h2>📋 备份详情</h2>
+        <button class="close-btn" onclick="closeBackupDetailModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="backup-info" id="backupInfo">
+          <!-- 备份信息 -->
+        </div>
+        <div class="password-list" id="backupPasswordList">
+          <!-- 备份中的密码列表 -->
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-danger" onclick="deleteBackup(currentBackupId)">🗑️ 删除备份</button>
+          <button class="btn btn-primary" onclick="restoreBackup(currentBackupId)">🔄 恢复备份</button>
+          <button class="btn btn-secondary" onclick="closeBackupDetailModal()">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content settings-modal">
+      <div class="modal-header">
+        <h2>⚙️ 设置</h2>
+        <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- 管理功能区域 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">📂 管理功能</h3>
+          <div class="settings-menu">
+            <div class="settings-menu-item" onclick="openBackupModal(); closeSettingsModal();">
+              <span class="menu-icon">📦</span>
+              <div class="menu-content">
+                <span class="menu-title">备份管理</span>
+                <span class="menu-desc">查看、恢复和删除历史备份</span>
+              </div>
+              <span class="menu-arrow">›</span>
+            </div>
+            <div class="settings-menu-item" onclick="openCategoryModal(); closeSettingsModal();">
+              <span class="menu-icon">📁</span>
+              <div class="menu-content">
+                <span class="menu-title">管理分类</span>
+                <span class="menu-desc">添加、编辑和删除分类</span>
+              </div>
+              <span class="menu-arrow">›</span>
+            </div>
+            <div class="settings-menu-item" onclick="openSortModal(); closeSettingsModal();">
+              <span class="menu-icon">↕️</span>
+              <div class="menu-content">
+                <span class="menu-title">分类排序</span>
+                <span class="menu-desc">调整分类显示顺序</span>
+              </div>
+              <span class="menu-arrow">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主题颜色设置 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">🎨 主题颜色</h3>
+          <div class="theme-presets">
+            <div class="theme-preset" data-theme="default" onclick="applyTheme('default')">
+              <div class="theme-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+              <span class="theme-name">默认紫</span>
+            </div>
+            <div class="theme-preset" data-theme="github-dark" onclick="applyTheme('github-dark')">
+              <div class="theme-preview" style="background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);"></div>
+              <span class="theme-name">GitHub黑</span>
+            </div>
+            <div class="theme-preset" data-theme="github-light" onclick="applyTheme('github-light')">
+              <div class="theme-preview" style="background: linear-gradient(135deg, #f6f8fa 0%, #ffffff 100%);"></div>
+              <span class="theme-name">GitHub白</span>
+            </div>
+            <div class="theme-preset" data-theme="ocean" onclick="applyTheme('ocean')">
+              <div class="theme-preview" style="background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);"></div>
+              <span class="theme-name">海洋蓝</span>
+            </div>
+            <div class="theme-preset" data-theme="sunset" onclick="applyTheme('sunset')">
+              <div class="theme-preview" style="background: linear-gradient(135deg, #ff512f 0%, #dd2476 100%);"></div>
+              <span class="theme-name">日落红</span>
+            </div>
+            <div class="theme-preset" data-theme="forest" onclick="applyTheme('forest')">
+              <div class="theme-preview" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);"></div>
+              <span class="theme-name">森林绿</span>
+            </div>
+          </div>
+          <div class="custom-theme">
+            <label>背景颜色</label>
+            <div class="color-inputs">
+              <input type="color" id="customColor1" value="#667eea" onchange="updateCustomTheme()">
+              <input type="color" id="customColor2" value="#764ba2" onchange="updateCustomTheme()">
+            </div>
+          </div>
+          <div class="custom-theme">
+            <label>文字颜色</label>
+            <div class="color-inputs">
+              <input type="color" id="customTextColor" value="#ffffff" onchange="updateCustomTheme()">
+              <input type="color" id="customCardTextColor" value="#333333" onchange="updateCustomTheme()">
+            </div>
+          </div>
+          <button class="btn btn-sm btn-primary btn-full" onclick="applyCustomTheme()">应用自定义主题</button>
+        </div>
+
+        <!-- 备份设置 -->
+        <div class="settings-section">
+          <h3 class="settings-section-title">💾 自动备份</h3>
+          <div class="form-group">
+            <label>备份间隔</label>
+            <select id="backupIntervalSelect">
+              <option value="1">1 小时</option>
+              <option value="6">6 小时</option>
+              <option value="12">12 小时</option>
+              <option value="24">24 小时（每天）</option>
+              <option value="168">168 小时（每周）</option>
+            </select>
+            <p class="hint">自动备份会在指定间隔后检查并执行备份</p>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="closeSettingsModal()">关闭</button>
+          <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分类排序弹窗 -->
+  <div class="modal" id="sortModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>↕️ 分类排序</h2>
+        <button class="close-btn" onclick="closeSortModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="sort-list" id="sortList">
+          <!-- 动态生成可排序的分类列表 -->
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="closeSortModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveCategoryOrder()">保存排序</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emoji选择器弹窗 -->
+  <div class="modal" id="emojiModal">
+    <div class="modal-content emoji-modal">
+      <div class="modal-header">
+        <h2>🎨 选择图标</h2>
+        <button class="close-btn" onclick="closeEmojiModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="emoji-categories" id="emojiCategories">
+          <!-- 动态生成emoji分类 -->
+        </div>
+        <div class="emoji-actions">
+          <button class="btn btn-secondary" onclick="getRandomEmoji()">🎲 随机选择</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提示消息 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
